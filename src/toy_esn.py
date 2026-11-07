@@ -24,9 +24,9 @@ import numpy as np
 
 print("ESN: sine wave, one-step-ahead and iterative prediction")
 
-# ------------------------------------------------------------------
+
 # 1. Hyperparameters
-# ------------------------------------------------------------------
+
 N     = 100          # node number
 ε     = 0.1          # sparseness: only a fraction ε of the entries of W is kept
 ρ     = 0.95         # spectral radius
@@ -47,16 +47,15 @@ seed    = 42
 
 rng = np.random.default_rng(seed)
 
-# ------------------------------------------------------------------
 # 2. Data: sine wave, rescaled to [0, 1]
-# ------------------------------------------------------------------
+
 n_total = n_trans + n_T + n_test + 1
 u   = 0.5 * (1 + np.sin(Δt * np.arange(n_total)))    # u_m, shape (n_total,)
 dim = 1                                               # dimension of u
 
-# ------------------------------------------------------------------
+
 # 3. Echo state network
-# ------------------------------------------------------------------
+
 W_in = rng.uniform(-1, 1, (N, 1 + dim))              # couples z_m = [b_in, u_m] to the nodes
 W = rng.uniform(-1, 1, (N, N))
 W[rng.random((N, N)) > ε] = 0.0                      # keep only a fraction ε
@@ -75,9 +74,8 @@ def update(s_prev, u_m):
     z_m = z(u_m)
     return (1 - α) * s_prev + α * np.tanh(ν * W_in @ z_m + ρ * W @ s_prev)
 
-# ------------------------------------------------------------------
 # 4. Training: drive the reservoir with the true u, record x_m and target u_{m+1}
-# ------------------------------------------------------------------
+
 s_0 = rng.random(N)                                  # s_0 uniform in [0, 1)^N
 s_m = s_0.copy()
 X = np.zeros((1 + N + dim, n_T))                     # columns are x_m
@@ -89,15 +87,15 @@ for m in range(n_trans + n_T):
         X[:, k] = x(s_m, u[m])
         Y[:, k] = u[m + 1]
 
-# Eq. (2): W_out = Y X^T (X X^T + β I)^-1, solved without forming the inverse
+
 I = np.eye(X.shape[0])
 W_out = np.linalg.solve(X @ X.T + β * I, X @ Y.T).T
 
 mse_train = np.mean((W_out @ X - Y) ** 2)
 
-# ------------------------------------------------------------------
+
 # 5. Test (a): one-step-ahead prediction, reservoir driven by the true signal
-# ------------------------------------------------------------------
+
 m_0 = n_trans + n_T                                  # index of the first test input
 s_a = s_m.copy()                                     # start from the last training state
 y_a    = np.zeros((dim, n_test))
@@ -109,9 +107,9 @@ for k in range(n_test):
 mse_onestep = np.mean((y_a - u_true) ** 2)
 mse_persist = np.mean((u[m_0:m_0 + n_test] - u_true[0]) ** 2)   # baseline y_m = u_m
 
-# ------------------------------------------------------------------
+
 # 6. Test (b): iterative (closed-loop) prediction, y_m fed back as u_{m+1}
-# ------------------------------------------------------------------
+
 s_b = s_m.copy()
 y_b = np.zeros((dim, n_test))
 u_m = u[m_0]                                         # only the first input is true data
@@ -127,9 +125,9 @@ exceeded = np.where(E >= e)[0]
 n_valid  = exceeded[0] if exceeded.size else n_test
 t_valid  = n_valid * Δt
 
-# ------------------------------------------------------------------
+
 # 7. Results
-# ------------------------------------------------------------------
+
 print("--------------------------------------------------")
 print(" RESULTS SUMMARY (sine wave):")
 print(f"N = {N}, Δt = {Δt}, n_T = {n_T}, n_test = {n_test}")
