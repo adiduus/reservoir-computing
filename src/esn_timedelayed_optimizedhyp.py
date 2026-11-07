@@ -3,15 +3,13 @@ Hyperparameter optimisation as described in Sec. II E of
 Fleddermann, Herzog & Parlitz, Chaos 35, 053147 (2025), then the delayed-values
 comparison repeated with the optimised classical hyperparameters.
 
-Stage 1  Grid search over the classical hyperparameters Δt, ε, ρ, ν, α.
-Stage 2  Nelder-Mead (scipy.optimize.minimize) over ε, ρ, ν, α, started from the
+Stage 1  Grid search over the classical hyperparameters 
+Stage 2  Nelder-Mead (scipy.optimize.minimize) over certain hyperparameters started from the
          best grid point. Reservoir seeds are fixed, as in the paper.
 Stage 3  Classical hyperparameters fixed at the Stage 2 result. Grid over the delay
-         hyperparameters N_I, Δt_I = i_IN Δt, N_R, Δt_R = i_R Δt.
+         hyperparameters 
 Stage 4  Report: the chosen settings are evaluated on separate test trajectories.
 
-β is searched at every evaluation over β_values. This only needs one extra linear
-solve per β, because X X^T and Y X^T do not depend on β.
 
 Difference from the paper: the paper chooses and reports on the same evaluation
 trajectories. Here the choice uses K_val validation trajectories and the reported
@@ -29,9 +27,8 @@ from scipy.optimize import minimize
 
 print("ESN: hyperparameter optimisation (grid search + Nelder-Mead)")
 
-# ------------------------------------------------------------------
 # 1. Settings
-# ------------------------------------------------------------------
+
 knowledge = "partial"      # "partial": input u^(y) only; "full": u^(x), u^(y), u^(z)
 
 N     = 300                # node number (fixed here; the paper also optimises N)
@@ -73,9 +70,9 @@ i_R_values  = [2, 4]
 cols, col_y = ([0, 1, 2], 1) if knowledge == "full" else ([1], 0)
 dim = len(cols)
 
-# ------------------------------------------------------------------
+
 # 2. Lorenz-63 data, Eq. (4), RK4. Stored at Δt_ds; sub-sampled for each Δt.
-# ------------------------------------------------------------------
+
 def lorenz63(u, a=10.0, b=28.0, c=8.0 / 3.0):
     u_x, u_y, u_z = u[:, 0], u[:, 1], u[:, 2]
     du_x = a * (u_y - u_x)
@@ -138,10 +135,10 @@ def get_data(Δt):
         _data_cache[Δt] = d
     return _data_cache[Δt]
 
-# ------------------------------------------------------------------
+
 # 3. Reservoirs. The random numbers are drawn once per reservoir, so reservoir r keeps
 #    the same entries while ε, ρ, ν, α change (fixed seeds, as in the paper's NM step).
-# ------------------------------------------------------------------
+#-----------------------------------------------------------------------
 raw = []
 for r in range(M):
     rng = np.random.default_rng(1000 + r)
@@ -185,7 +182,6 @@ class History:
         h.L, h.i = self.L, self.i
         return h
 
-# ------------------------------------------------------------------
 # 4. Train and evaluate: returns t_valid of every β, reservoir and trajectory
 # ------------------------------------------------------------------
 def evaluate(hp, delays, which, β_list):
@@ -288,9 +284,8 @@ def hp_text(hp):
 classical = (0, 1, 0, 1)                                  # N_I = N_R = 0
 results = {"knowledge": knowledge, "N": N, "M": M, "K_val": K_val, "K_test": K_test}
 
-# ------------------------------------------------------------------
 # 5. Stage 1: grid search
-# ------------------------------------------------------------------
+
 print(f"\nStage 1: grid search ({np.prod([len(v) for v in grid.values()])} points, "
       f"β searched over {len(β_values)} values each)")
 t_stage = time.time()
@@ -306,9 +301,9 @@ print(f"Best grid point: {hp_text(best1[2])}, β={best1[1]:g}, t_valid(val) = {b
       f"[{time.time() - t_stage:.0f} s]")
 results["stage1_best"] = dict(hp=best1[2], β=best1[1], t_valid_val=best1[0])
 
-# ------------------------------------------------------------------
+
 # 6. Stage 2: Nelder-Mead from the best grid point
-# ------------------------------------------------------------------
+
 print(f"\nStage 2: Nelder-Mead over {nm_params} (at most {nm_max_evals} evaluations)")
 t_stage = time.time()
 Δt_best = best1[2]["Δt"]
@@ -341,9 +336,9 @@ print(f"Best after Nelder-Mead: {hp_text(hp_classical)}, β={β_classical:g}, "
       f"t_valid(val) = {best2[0]:.2f}  [{time.time() - t_stage:.0f} s]")
 results["stage2_best"] = dict(hp=hp_classical, β=β_classical, t_valid_val=best2[0])
 
-# ------------------------------------------------------------------
+
 # 7. Stage 3: delay grid with the classical hyperparameters fixed
-# ------------------------------------------------------------------
+
 print(f"\nStage 3: delayed values, classical hyperparameters fixed at {hp_text(hp_classical)}")
 t_stage = time.time()
 stage3 = {}
@@ -359,7 +354,7 @@ for N_I in N_I_values:
         print(f"  N_I={N_I} N_R={N_R}: t_valid(val) = {t_mean:.2f}  "
               f"(Δt_I={i_IN}Δt, Δt_R={i_R}Δt, β={β:g})  [{time.time() - t_stage:.0f} s]")
 
-# ------------------------------------------------------------------
+
 # 8. Stage 4: evaluate the chosen settings on the test trajectories
 # ------------------------------------------------------------------
 print("\nStage 4: test trajectories")
